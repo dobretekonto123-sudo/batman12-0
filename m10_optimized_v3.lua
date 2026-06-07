@@ -15,6 +15,7 @@ local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
 local TweenService = game:GetService("TweenService")
 local Stats = game:GetService("Stats")
+local MaterialService = game:GetService("MaterialService")
 
 local player = Players.LocalPlayer
 local playerGui = player:WaitForChild("PlayerGui")
@@ -24,6 +25,12 @@ if not RunService:IsClient() then
 	warn("This script must run on the client side")
 	return
 end
+
+-- ============================================================================
+-- RENDERING SETTINGS
+-- ============================================================================
+
+MaterialService.Use2022Materials = true
 
 -- ============================================================================
 -- CONFIGURATION & CONSTANTS

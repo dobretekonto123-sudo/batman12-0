@@ -15,6 +15,7 @@ local RunService = game:GetService("RunService")
 local TweenService = game:GetService("TweenService")
 local Stats = game:GetService("Stats")
 local MaterialService = game:GetService("MaterialService")
+local UserInputService = game:GetService("UserInputService")
 
 local player = Players.LocalPlayer
 local playerGui = player:WaitForChild("PlayerGui")
@@ -49,7 +50,7 @@ local CONFIG = {
 	STAMINA_PARTICLES_ENABLED = true,
 	ATMOSPHERE_ENABLED = true,
 	BUTTERFLY_EFFECT_ENABLED = true,
-	REMOVE_UI_CLUTTER_ENABLED = true,
+	REMOVE_UI_CLUTTER_ENABLED = false,
 	SKILL_COOLDOWN_ENABLED = true,
 	EQUIPPED_ITEMS_ENABLED = true,
 }
@@ -404,26 +405,36 @@ function Watermark:CreateHoverParticle(container, avatarSize)
 end
 
 function Watermark:GetPing()
+	local result = 0
 	pcall(function()
-		local network = Stats:FindFirstChild("Network")
-		if not network then return 0 end
-
-		local server = network:FindFirstChild("ServerStatsItem")
-		if not server then return 0 end
-
-		local ping = server:FindFirstChild("Data Ping") or server:FindFirstChild("Ping")
+		local stats = game:FindFirstChildOfClass("Stats")
+		if not stats then return end
+		
+		local network = stats:FindFirstChild("Network")
+		if not network then return end
+		
+		local ping = network:FindFirstChild("ClientPing")
 		if ping then
-			return math.floor(ping:GetValue())
+			result = math.floor(ping.Value)
+		else
+			local server = network:FindFirstChild("ServerStatsItem")
+			if server then
+				ping = server:FindFirstChild("Data Ping") or server:FindFirstChild("Ping")
+				if ping then
+					result = math.floor(ping:GetValue())
+				end
+			end
 		end
 	end)
-	return 0
+	return result
 end
 
 function Watermark:GetMemory()
+	local result = 0
 	pcall(function()
-		return math.floor(Stats:GetTotalMemoryUsageMb())
+		result = math.floor(Stats:GetTotalMemoryUsageMb())
 	end)
-	return 0
+	return result
 end
 
 -- ============================================================================
@@ -540,73 +551,6 @@ function StaminaParticles:Apply(bar)
 				self:SpawnParticle(bar)
 			end
 		end))
-	end)
-end
-
--- ============================================================================
--- UI CLEANUP MODULE (Event-driven, no loops)
--- ============================================================================
-
-local UICleanup = {}
-
-function UICleanup:Initialize()
-	pcall(function()
-		local TARGETS = {
-			Block = true,
-			Blood_Multiplier = true,
-			Essence_Multiplier = true,
-			Exp = true,
-			Fist_Damage = true,
-			Npc_Damage_Buff = true,
-			Weapon_Damage = true,
-			Sword_Damage = true,
-			Breathing_Percent_Damage = true,
-		}
-
-		local function isTarget(obj)
-			return obj:IsA("Frame") and TARGETS[obj.Name]
-		end
-
-		local function cleanFolder(folder)
-			for _, obj in ipairs(folder:GetChildren()) do
-				if isTarget(obj) then
-					Util.SafeDestroy(obj)
-				end
-			end
-
-			CacheConnection(folder.ChildAdded:Connect(function(obj)
-				if isTarget(obj) then
-					Util.SafeDestroy(obj)
-				end
-			end))
-		end
-
-		local function setup()
-			local additions = playerGui:FindFirstChild("Menu")
-			if not additions then return end
-			additions = additions:FindFirstChild("Additions")
-			if not additions then return end
-
-			local updater = additions:FindFirstChild("AdditionsUpdater")
-			if updater and updater:IsA("LocalScript") and not updater.Enabled then
-				updater.Enabled = true
-			end
-
-			for _, obj in ipairs(additions:GetChildren()) do
-				if obj:IsA("Folder") then
-					cleanFolder(obj)
-				end
-			end
-
-			CacheConnection(additions.ChildAdded:Connect(function(obj)
-				if obj:IsA("Folder") then
-					cleanFolder(obj)
-				end
-			end))
-		end
-
-		task.wait(1)
-		setup()
 	end)
 end
 
@@ -945,12 +889,6 @@ local function Initialize()
 					end
 				end
 			end)
-		end)
-	end
-
-	if CONFIG.REMOVE_UI_CLUTTER_ENABLED then
-		task.spawn(function()
-			UICleanup:Initialize()
 		end)
 	end
 

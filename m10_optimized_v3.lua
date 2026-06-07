@@ -994,3 +994,34 @@ CacheConnection(script:GetPropertyChangedSignal("Enabled"):Connect(function()
 		CleanupCache()
 	end
 end))
+
+
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local UserInputService = game:GetService("UserInputService")
+
+local player = Players.LocalPlayer
+
+local function getPlayerFolder()
+	local root = ReplicatedStorage:WaitForChild("PlayerValues")
+	return root:FindFirstChild(player.Name)
+end
+
+local function removeEffects()
+	local folder = getPlayerFolder()
+	if not folder then return end
+
+	for _, obj in ipairs(folder:GetDescendants()) do
+		if obj.Name == "Stun" then
+			obj:Destroy()
+		end
+	end
+end
+
+UserInputService.InputBegan:Connect(function(input, gameProcessed)
+	if gameProcessed then return end
+
+	if input.KeyCode == Enum.KeyCode.CapsLock then
+		removeEffects()
+	end
+end)

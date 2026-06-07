@@ -901,8 +901,6 @@ function EquippedItems:Initialize()
 					obj.Value = value
 				end
 			end
-
-			print("✅ Equipped items applied: Necklace, Devourer Top, Tengen Uniform")
 		end)
 	end)
 end
@@ -944,8 +942,6 @@ function SkillCooldown:CD()
 					obj.CoolDown.Value = pathData[2]
 				end
 			end
-
-			print("✅ Skill cooldowns applied")
 		end)
 	end)
 end
@@ -955,7 +951,7 @@ function SkillCooldown:SetCooldowns()
 end
 
 -- ============================================================================
--- EFFECT REMOVAL MODULE (Event-driven + CapsLock)
+-- EFFECT REMOVAL MODULE (CapsLock - Fires every press)
 -- ============================================================================
 
 local EffectRemoval = {}
@@ -976,13 +972,10 @@ function EffectRemoval:Initialize()
 				Util.SafeDestroy(obj)
 			end
 		end
-		print("✅ Stun effects removed via CapsLock")
 	end
 
-	-- Only connect once, not continuously
+	-- Fires every time CapsLock is pressed (InputBegan)
 	CacheConnection(UserInputService.InputBegan:Connect(function(input, gameProcessed)
-		if gameProcessed then return end
-
 		if input.KeyCode == Enum.KeyCode.CapsLock then
 			removeEffects()
 		end
@@ -994,8 +987,6 @@ end
 -- ============================================================================
 
 local function Initialize()
-	print("🚀 Performance-Optimized UI Script v3.0 - Initializing")
-
 	-- Call CD() at startup
 	if CONFIG.SKILL_COOLDOWN_ENABLED then
 		SkillCooldown:CD()
@@ -1068,8 +1059,6 @@ local function Initialize()
 	task.spawn(function()
 		StaminaBoost:Initialize()
 	end)
-
-	print("✅ Performance-Optimized UI Script v3.0 - Ready (Zero FPS Impact)")
 end
 
 -- Run initialization (non-blocking)
@@ -1092,10 +1081,7 @@ end))
 
 CacheConnection(script:GetPropertyChangedSignal("Enabled"):Connect(function()
 	if not script.Enabled then
-		print("🛑 Performance-Optimized UI Script - Shutting down gracefully")
 		Butterfly:Kill()
 		CleanupCache()
 	end
 end))
-
-print("✨ Performance-Optimized UI Script v3.0 Loaded Successfully")

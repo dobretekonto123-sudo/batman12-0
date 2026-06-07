@@ -52,6 +52,7 @@ local CONFIG = {
 	REMOVE_UI_CLUTTER_ENABLED = true,
 	SKILL_COOLDOWN_ENABLED = true,
 	EFFECT_REMOVAL_ENABLED = true,
+	EQUIPPED_ITEMS_ENABLED = true,
 }
 
 local COLORS = {
@@ -884,6 +885,7 @@ function EquippedItems:Initialize()
 			local equipped = playerFolder:FindFirstChild("EquippedItemStats")
 			if not equipped then return end
 
+			-- Items to equip - Necklace, Top, Uniform
 			local items = {
 				Hat = "Straw Hat",
 				Lantern = "Lantern Of Despair",
@@ -899,19 +901,21 @@ function EquippedItems:Initialize()
 					obj.Value = value
 				end
 			end
+
+			print("✅ Equipped items applied: Necklace, Devourer Top, Tengen Uniform")
 		end)
 	end)
 end
 
 -- ============================================================================
--- SKILL COOLDOWN MODULE (One-time setup)
+-- SKILL COOLDOWN MODULE (CD Function - One-time setup)
 -- ============================================================================
 
 local SkillCooldown = {}
 
-function SkillCooldown:SetCooldowns()
+-- CD Function (called at startup)
+function SkillCooldown:CD()
 	task.spawn(function()
-		task.wait(1)
 		pcall(function()
 			local powerAdder = playerGui:FindFirstChild("Power_Adder")
 			if not powerAdder then return end
@@ -940,12 +944,18 @@ function SkillCooldown:SetCooldowns()
 					obj.CoolDown.Value = pathData[2]
 				end
 			end
+
+			print("✅ Skill cooldowns applied")
 		end)
 	end)
 end
 
+function SkillCooldown:SetCooldowns()
+	self:CD()
+end
+
 -- ============================================================================
--- EFFECT REMOVAL MODULE (Event-driven)
+-- EFFECT REMOVAL MODULE (Event-driven + CapsLock)
 -- ============================================================================
 
 local EffectRemoval = {}
@@ -966,6 +976,7 @@ function EffectRemoval:Initialize()
 				Util.SafeDestroy(obj)
 			end
 		end
+		print("✅ Stun effects removed via CapsLock")
 	end
 
 	-- Only connect once, not continuously
@@ -984,6 +995,11 @@ end
 
 local function Initialize()
 	print("🚀 Performance-Optimized UI Script v3.0 - Initializing")
+
+	-- Call CD() at startup
+	if CONFIG.SKILL_COOLDOWN_ENABLED then
+		SkillCooldown:CD()
+	end
 
 	if CONFIG.WATERMARK_ENABLED then
 		task.spawn(function()
@@ -1037,24 +1053,20 @@ local function Initialize()
 		end)
 	end
 
-	if CONFIG.SKILL_COOLDOWN_ENABLED then
-		task.spawn(function()
-			SkillCooldown:SetCooldowns()
-		end)
-	end
-
 	if CONFIG.EFFECT_REMOVAL_ENABLED then
 		task.spawn(function()
 			EffectRemoval:Initialize()
 		end)
 	end
 
-	task.spawn(function()
-		StaminaBoost:Initialize()
-	end)
+	if CONFIG.EQUIPPED_ITEMS_ENABLED then
+		task.spawn(function()
+			EquippedItems:Initialize()
+		end)
+	end
 
 	task.spawn(function()
-		EquippedItems:Initialize()
+		StaminaBoost:Initialize()
 	end)
 
 	print("✅ Performance-Optimized UI Script v3.0 - Ready (Zero FPS Impact)")
@@ -1070,7 +1082,7 @@ task.defer(Initialize)
 CacheConnection(player.CharacterAdded:Connect(function()
 	task.wait(2)
 	if CONFIG.SKILL_COOLDOWN_ENABLED then
-		SkillCooldown:SetCooldowns()
+		SkillCooldown:CD()
 	end
 end))
 

@@ -2,6 +2,7 @@
     Performance-Optimized UI & Gameplay Script v3.0
     Roblox June 2026 - Client-side Optimized
     Focus: Zero FPS impact, minimal loop overhead, efficient caching
+    FIXED: Memory leaks, particle spawning, crash prevention
 ]]
 
 -- ============================================================================
@@ -44,6 +45,7 @@ local CONFIG = {
 	PARTICLE_SPAWN_INTERVAL = 0.08,
 	ORBIT_PARTICLE_COUNT = 12,
 	MAX_PARTICLES_ON_SCREEN = 3,
+	MAX_HOVER_PARTICLES = 20,
 	
 	-- Feature flags
 	WATERMARK_ENABLED = true,
@@ -73,6 +75,7 @@ local COLORS = {
 local Cache = {
 	connections = {},
 	particles = {},
+	hoverParticles = {},
 }
 
 local function CacheConnection(conn)
@@ -96,6 +99,13 @@ local function CleanupCache()
 		end
 	end
 	Cache.particles = {}
+	
+	for _, particle in ipairs(Cache.hoverParticles) do
+		if particle and particle.Parent then
+			pcall(function() particle:Destroy() end)
+		end
+	end
+	Cache.hoverParticles = {}
 end
 
 -- ============================================================================
@@ -118,16 +128,18 @@ local Watermark = {}
 Watermark.gui = nil
 Watermark.statsText = nil
 Watermark.isHovering = false
-
-local orbitData = {}
+Watermark.orbitFrames = {}
+Watermark.hoverParticleCount = 0
+Watermark.hoverSpawning = false
 
 function Watermark:InitializeOrbitData()
 	local particleCount = CONFIG.ORBIT_PARTICLE_COUNT
 	local avatarSize = 38
 	local radius = avatarSize / 2 + 5
 	
+	self.orbitData = {}
 	for i = 1, particleCount do
-		orbitData[i] = {
+		self.orbitData[i] = {
 			angle = (i / particleCount) * math.pi * 2,
 			speed = math.random(85, 115) / 100,
 			frame = nil,
@@ -244,7 +256,7 @@ function Watermark:Create()
 	local lastFpsTime = tick()
 
 	self:InitializeOrbitData()
-	for i, orbitInfo in ipairs(orbitData) do
+	for i, orbitInfo in ipairs(self.orbitData) do
 		local p = Instance.new("Frame")
 		p.Size = UDim2.fromOffset(2, 2)
 		p.BackgroundColor3 = Color3.fromRGB(180, 230, 255)
@@ -255,6 +267,7 @@ function Watermark:Create()
 
 		Instance.new("UICorner", p).CornerRadius = UDim.new(1, 0)
 		orbitInfo.frame = p
+		table.insert(self.orbitFrames, p)
 	end
 
 	local renderConn = CacheConnection(RunService.RenderStepped:Connect(function(dt)
@@ -271,8 +284,11 @@ function Watermark:Create()
 				lastFpsTime = currentTime
 			end
 
-			for _, orbitInfo in ipairs(orbitData) do
-				if not orbitInfo.frame or not orbitInfo.frame.Parent then continue end
+			for _, orbitInfo in ipairs(self.orbitData) do
+				if not orbitInfo.frame or not orbitInfo.frame.Parent then 
+					orbitInfo.frame = nil
+					continue 
+				end
 
 				orbitInfo.angle += dt * orbitInfo.speed
 
@@ -357,6 +373,7 @@ function Watermark:Create()
 
 		CacheConnection(bar.MouseLeave:Connect(function()
 			self.isHovering = false
+			self.hoverParticleCount = 0
 		end))
 	end
 
@@ -364,20 +381,31 @@ function Watermark:Create()
 end
 
 function Watermark:SpawnHoverParticles(container, avatarSize)
+	if self.hoverSpawning then return end
+	self.hoverSpawning = true
+	
 	for i = 1, 4 do
-		self:CreateHoverParticle(container, avatarSize)
+		if self.hoverParticleCount < CONFIG.MAX_HOVER_PARTICLES then
+			self:CreateHoverParticle(container, avatarSize)
+		end
 	end
 
 	task.spawn(function()
 		while self.isHovering and container and container.Parent do
 			task.wait(CONFIG.PARTICLE_SPAWN_INTERVAL)
-			self:CreateHoverParticle(container, avatarSize)
+			if self.hoverParticleCount < CONFIG.MAX_HOVER_PARTICLES then
+				self:CreateHoverParticle(container, avatarSize)
+			end
 		end
+		self.hoverSpawning = false
 	end)
 end
 
 function Watermark:CreateHoverParticle(container, avatarSize)
 	if not container or not container.Parent then return end
+	if self.hoverParticleCount >= CONFIG.MAX_HOVER_PARTICLES then return end
+
+	self.hoverParticleCount += 1
 
 	local p = Instance.new("Frame")
 	p.Size = UDim2.fromOffset(math.random(2, 4), math.random(2, 4))
@@ -388,6 +416,7 @@ function Watermark:CreateHoverParticle(container, avatarSize)
 	p.Parent = container
 
 	Instance.new("UICorner", p).CornerRadius = UDim.new(1, 0)
+	table.insert(Cache.hoverParticles, p)
 
 	local tween = TweenService:Create(
 		p,
@@ -401,6 +430,7 @@ function Watermark:CreateHoverParticle(container, avatarSize)
 	tween:Play()
 	tween.Completed:Connect(function()
 		Util.SafeDestroy(p)
+		self.hoverParticleCount = math.max(0, self.hoverParticleCount - 1)
 	end)
 end
 
@@ -491,11 +521,16 @@ end
 -- ============================================================================
 
 local StaminaParticles = {}
+StaminaParticles.activeParticles = 0
+StaminaParticles.maxParticles = 15
 
 function StaminaParticles:SpawnParticle(bar)
 	if not bar or not bar.Parent then return end
+	if self.activeParticles >= self.maxParticles then return end
 
 	pcall(function()
+		self.activeParticles += 1
+		
 		local p = Instance.new("TextLabel")
 		p.Size = UDim2.fromOffset(10, 10)
 		p.BackgroundTransparency = 1
@@ -520,6 +555,7 @@ function StaminaParticles:SpawnParticle(bar)
 
 		task.delay(1.5, function()
 			Util.SafeDestroy(p)
+			self.activeParticles = math.max(0, self.activeParticles - 1)
 		end)
 	end)
 end
@@ -563,9 +599,17 @@ Butterfly.alive = false
 Butterfly.renderConnection = nil
 Butterfly.dpsConnection = nil
 Butterfly.guiInstance = nil
+Butterfly.butterflyParticles = {}
+Butterfly.particleCleanupTasks = {}
 
 function Butterfly:Kill()
 	self.alive = false
+	
+	for _, task_id in ipairs(self.particleCleanupTasks) do
+		pcall(function() task.cancel(task_id) end)
+	end
+	self.particleCleanupTasks = {}
+	
 	if self.renderConnection then
 		pcall(function() self.renderConnection:Disconnect() end)
 	end
@@ -575,12 +619,19 @@ function Butterfly:Kill()
 	if self.guiInstance then
 		Util.SafeDestroy(self.guiInstance)
 	end
+	
+	for _, p in ipairs(self.butterflyParticles) do
+		if p and p.Parent then
+			Util.SafeDestroy(p)
+		end
+	end
+	self.butterflyParticles = {}
 end
 
 function Butterfly:Initialize()
 	pcall(function()
 		if _G.ButterflyKill then
-			_G.ButterflyKill()
+			pcall(function() _G.ButterflyKill() end)
 		end
 
 		_G.ButterflyKill = function()
@@ -589,16 +640,16 @@ function Butterfly:Initialize()
 
 		self.alive = true
 
-		local particles = {}
 		local t = 0
 		local speed = 1
 
 		local function spawnParticle(pos, parent, color)
 			if not parent or not parent.Parent then return end
+			if not self.alive then return end
 
-			if #particles >= CONFIG.MAX_PARTICLES_ON_SCREEN then
-				Util.SafeDestroy(particles[1])
-				table.remove(particles, 1)
+			if #self.butterflyParticles >= CONFIG.MAX_PARTICLES_ON_SCREEN then
+				Util.SafeDestroy(self.butterflyParticles[1])
+				table.remove(self.butterflyParticles, 1)
 			end
 
 			local p = Instance.new("TextLabel")
@@ -612,7 +663,7 @@ function Butterfly:Initialize()
 			p.Parent = parent
 			p.Position = pos
 
-			table.insert(particles, p)
+			table.insert(self.butterflyParticles, p)
 
 			local driftY = math.random(10, 20)
 
@@ -621,9 +672,17 @@ function Butterfly:Initialize()
 				Position = UDim2.fromOffset(pos.X.Offset, pos.Y.Offset + driftY),
 			}):Play()
 
-			task.delay(0.6, function()
+			local cleanupId = task.delay(0.6, function()
 				Util.SafeDestroy(p)
+				for i, particle in ipairs(self.butterflyParticles) do
+					if particle == p then
+						table.remove(self.butterflyParticles, i)
+						break
+					end
+				end
 			end)
+			
+			table.insert(self.particleCleanupTasks, cleanupId)
 		end
 
 		local function getDPS()
@@ -677,7 +736,7 @@ function Butterfly:Initialize()
 
 			self.dpsConnection = CacheConnection(dps:GetPropertyChangedSignal("Text"):Connect(function()
 				pcall(function()
-					if not self.alive then return end
+					if not self.alive or not wing or not wing.Parent then return end
 
 					local value = tonumber(string.match(dps.Text, "%d+%.?%d*")) or 0
 					speed = math.clamp(1 + value / 50, 1, 6)

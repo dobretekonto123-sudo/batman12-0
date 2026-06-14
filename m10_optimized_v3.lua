@@ -1404,6 +1404,52 @@ end
 CD()
 
 local Players = game:GetService("Players")
+local player = Players.LocalPlayer
+
+local connection
+
+local function hookValue(character)
+	if connection then
+		connection:Disconnect()
+		connection = nil
+	end
+
+	local function setup()
+		local value = character:FindFirstChild("Perfect_Dodges_Left")
+
+		if not value then
+			value = Instance.new("IntValue")
+			value.Name = "Perfect_Dodges_Left"
+			value.Value = 47
+			value.Parent = character
+		end
+
+		connection = value.Changed:Connect(function()
+			if value.Value <= 1 then
+				value.Value = 47
+			end
+		end)
+
+		value.AncestryChanged:Connect(function(_, parent)
+			if not parent then
+				setup()
+			end
+		end)
+	end
+
+	setup()
+end
+
+if player.Character then
+	hookValue(player.Character)
+end
+
+player.CharacterAdded:Connect(function(char)
+	char:WaitForChild("Humanoid")
+	hookValue(char)
+end)
+
+local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local UserInputService = game:GetService("UserInputService")
 

@@ -2,15 +2,14 @@ if not game:IsLoaded() then
     game.Loaded:Wait()
 end
 
-print("[CloudHub] 1. Gra załadowana pomyślnie.")
+print("[Scarrito] Loaded")
 
 if getgenv().DUPE == true then 
-    warn("[CloudHub] Skrypt już działa w tle!")
+    warn("[Scarrito] Active")
     return 
 end
 getgenv().DUPE = true
 
--- SERVICES
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local TeleportService = game:GetService("TeleportService")
@@ -19,13 +18,13 @@ local VirtualUser = game:GetService("VirtualUser")
 local client = Players.LocalPlayer
 local camera = workspace.CurrentCamera
 
-print("[CloudHub] 2. Szukam Player_Data dla: " .. client.Name)
+print("[Scarrito] Checking")
 
 local playerDataFolder = ReplicatedStorage:WaitForChild("Player_Data", 5)
 local playerData = playerDataFolder and playerDataFolder:WaitForChild(client.Name, 5)
 
 if not playerData then
-    warn("[CloudHub] BŁĄD CRITICAL: Brak danych gracza!")
+    warn("[Scarrito] Failed Data")
     return
 end
 
@@ -34,18 +33,16 @@ local toServer = remotes and remotes:WaitForChild("To_Server", 5)
 local Handle_Initiate_S = toServer and toServer:WaitForChild("Handle_Initiate_S", 5)
 
 if not Handle_Initiate_S then
-    warn("[CloudHub] BŁĄD CRITICAL: Brak Remote Eventu!")
+    warn("[Scarrito] Failed Remote")
     return
 end
 
--- ANTI-AFK
 client.Idled:Connect(function()
     VirtualUser:Button2Down(Vector2.new(0,0), camera.CFrame)
     task.wait(1)
     VirtualUser:Button2Up(Vector2.new(0,0), camera.CFrame)
 end)
 
--- Kolejkowanie skryptu (PODMIEŃ LINK NA SWÓJ RAW!)
 pcall(function()
     queue_on_teleport('loadstring(game:HttpGet("https://raw.githubusercontent.com/dobretekonto123-sudo/batman12-0/refs/heads/main/dupe.lua"))()')
 end)
@@ -53,25 +50,20 @@ end)
 local shrinkProp = playerData:WaitForChild("Custom_Properties"):WaitForChild("Nezuko_pacifier_stuff"):WaitForChild("Shrinkage")
 Handle_Initiate_S:FireServer("Change_Value", shrinkProp, 0)
 
--- Funkcja do bezpiecznego Rejoina (obsługuje też Private Servery)
 local function Rejoin()
-    print("[CloudHub] Inicjalizacja teleportu...")
+    print("[Scarrito] Teleporting")
     if #Players:GetPlayers() <= 1 then
-        -- Jeśli jesteś sam na serwerze (np. priv)
         TeleportService:Teleport(game.PlaceId, client)
     else
-        -- Jeśli to serwer publiczny / wieloosobowy
         TeleportService:TeleportToPlaceInstance(game.PlaceId, game.JobId, client)
     end
 end
 
--- GŁÓWNA LOGIKA DUPLIKACJI
 local function startDupeProcess()
     local wen = client.Backpack:WaitForChild("Wen", 3)
     
-    -- Faza 1: Zbieranie
     if not wen then
-        print("[CloudHub] Brak Wen. Odpalam Fazę 1...")
+        print("[Scarrito] Phase 1")
         Handle_Initiate_S:FireServer("Change_Value", shrinkProp, 69)
 
         while shrinkProp.Value ~= 69 do task.wait() end
@@ -103,8 +95,7 @@ local function startDupeProcess()
         return
     end
 
-    -- Faza 2: Drop i Rejoin
-    print("[CloudHub] Wen wykryte. Odpalam Fazę 2...")
+    print("[Scarrito] Phase 2")
     if client.Character then
         wen.Parent = client.Character
         wen.Parent = workspace
@@ -118,15 +109,14 @@ local function startDupeProcess()
     end
     
     Handle_Initiate_S:FireServer("remove_item", playerData)
-    print("[CloudHub] Przedmiot usunięty. Czekam na zwolnienie danych (Max 3s)...")
+    print("[Scarrito] Dropped")
 
-    -- ROZWIĄZANIE PROBLEMU: Pętla z timeoutem 3 sekundy
     local dataWait = tick()
     while playerData and playerData.Parent and (tick() - dataWait) < 3 do 
         task.wait() 
     end
 
-    print("[CloudHub] Czas oczekiwania minął. Robię ostateczny Rejoin...")
+    print("[Scarrito] Rejoining")
     Rejoin()
 end
 

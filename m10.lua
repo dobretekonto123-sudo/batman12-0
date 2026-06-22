@@ -592,7 +592,7 @@ local REAPER_COLOR = Color3.fromRGB(0, 150, 255)
 local ghostCache = {}
 
 local BODY_PARTS = {
-    "Head", "UpperTorso", "LowerTorso", "LeftUpperArm", "LeftLowerArm", "LeftHand",
+    "LowerTorso", "LeftUpperArm", "LeftLowerArm", "LeftHand",
     "RightUpperArm", "RightLowerArm", "RightHand", "LeftUpperLeg", "LeftLowerLeg", 
     "LeftFoot", "RightUpperLeg", "RightLowerLeg", "RightFoot"
 }

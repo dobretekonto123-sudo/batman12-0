@@ -57,7 +57,7 @@ local function CreateWatermark()
         ColorSequenceKeypoint.new(0, Color3.fromRGB(150, 220, 255)),
         ColorSequenceKeypoint.new(1, Color3.fromRGB(90, 160, 255))
     }
-    glowGradient.Parent = stroke -- Naprawiono odwołanie do shoreGlow
+    glowGradient.Parent = stroke
 
     local particleContainer = Instance.new("Frame")
     particleContainer.Size = UDim2.fromScale(1, 1)

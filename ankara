@@ -25,21 +25,21 @@ task.spawn(function()
     end
 end)
 
-task.spawn(function()
+--[[task.spawn(function()
     local folder = player:WaitForChild("Player_Titles_List")
     for _, obj in ipairs(folder:GetChildren()) do
         if obj:IsA("IntValue") and obj.Name:lower():find("rothschild") then
             obj.Value = 100000001
         end
     end
-end)
+end)]]
 
 task.spawn(function()
     local equipped = ReplicatedStorage:WaitForChild("Player_Data"):WaitForChild(player.Name):WaitForChild("EquippedItemStats")
     if equipped then
         local itemsToEquip = {
             Hat="Straw Hat", Lantern="Lantern Of Despair", Mask="Banigaru Mask", 
-            Shirt="Devourer Top", Uniform="Tengen Uniform", Necklace="Kesshoseki Necklace", Haorie="Tokosen Haorie"
+            Shirt="Devourer Top", Uniform="Tengen Uniform", Haorie="Tokosen Haorie"
         }
         for k, v in pairs(itemsToEquip) do
             local obj = equipped:FindFirstChild(k)

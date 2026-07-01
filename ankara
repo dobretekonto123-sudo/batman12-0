@@ -1,0 +1,214 @@
+-- wip charge dem hoes a fee
+
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local Lighting = game:GetService("Lighting")
+local RunService = game:GetService("RunService")
+local UserInputService = game:GetService("UserInputService")
+local TweenService = game:GetService("TweenService")
+local MaterialService = game:GetService("MaterialService")
+local Stats = game:GetService("Stats")
+local GuiService = game:GetService("GuiService")
+
+--MaterialService.Use2022Materials = true
+
+local player = Players.LocalPlayer
+local playerGui = player:WaitForChild("PlayerGui")
+
+task.spawn(function()
+    local stamina = ReplicatedStorage:WaitForChild("PlayerValues"):WaitForChild(player.Name):WaitForChild("Stamina")
+    if stamina:IsA("IntConstrainedValue") then
+        stamina.MinValue = 80
+        stamina:GetPropertyChangedSignal("MinValue"):Connect(function()
+            if stamina.MinValue < 80 then stamina.MinValue = 80 end
+        end)
+    end
+end)
+
+task.spawn(function()
+    local folder = player:WaitForChild("Player_Titles_List")
+    for _, obj in ipairs(folder:GetChildren()) do
+        if obj:IsA("IntValue") and obj.Name:lower():find("rothschild") then
+            obj.Value = 100000001
+        end
+    end
+end)
+
+task.spawn(function()
+    local equipped = ReplicatedStorage:WaitForChild("Player_Data"):WaitForChild(player.Name):WaitForChild("EquippedItemStats")
+    if equipped then
+        local itemsToEquip = {
+            Hat="Straw Hat", Lantern="Lantern Of Despair", Mask="Banigaru Mask", 
+            Shirt="Devourer Top", Uniform="Tengen Uniform", Necklace="Kesshoseki Necklace", Haorie="Tokosen Haorie"
+        }
+        for k, v in pairs(itemsToEquip) do
+            local obj = equipped:FindFirstChild(k)
+            if obj and obj:IsA("StringValue") then obj.Value = v end
+        end
+    end
+end)
+
+for _, v in pairs(Lighting:GetChildren()) do
+    if v.Name == "CustomColorFX" or v.Name == "CustomBlurFX" then v:Destroy() end
+end
+
+local atm = Lighting:FindFirstChildOfClass("Atmosphere") or Instance.new("Atmosphere", Lighting)
+atm.Name = "CustomAtmosphere"
+atm.Color = Color3.fromRGB(255, 235, 200)
+atm.Decay = Color3.fromRGB(255, 240, 220)
+atm.Density = 0.414
+atm.Offset = 0.27
+
+if not atm:FindFirstChild("LockValues") then
+    Instance.new("BoolValue", atm).Name = "LockValues"
+    atm:GetPropertyChangedSignal("Density"):Connect(function() if atm.Parent then atm.Density = 0.414 end end)
+    atm:GetPropertyChangedSignal("Offset"):Connect(function() if atm.Parent then atm.Offset = 0.27 end end)
+end
+
+local main = Instance.new("ColorCorrectionEffect", Lighting)
+main.Name = "CustomColorFX"
+main.Saturation = 0.65
+main.Contrast = 0.08
+main.Brightness = 0.015
+
+Lighting.ExposureCompensation = 0.11
+Lighting.Brightness = 2.1
+
+local blur = Lighting:FindFirstChildOfClass("BlurEffect") or Instance.new("BlurEffect", Lighting)
+blur.Name = "CustomBlurFX"
+blur.Size = 3
+blur.Enabled = true
+
+
+local function applyDodges(character)
+    local value = character:FindFirstChild("Perfect_Dodges_Left")
+    if not value then
+        value = Instance.new("IntValue")
+        value.Name = "Perfect_Dodges_Left"
+        value.Value = 47
+        value.Parent = character
+    else
+        if value.Value <= 0 then value.Value = 47 end
+    end
+    value:GetPropertyChangedSignal("Value"):Connect(function()
+        if value.Value <= 0 then value.Value = 47 end
+    end)
+end
+
+local function CD()
+    local p = playerGui:FindFirstChild("Power_Adder")
+    if not p then return end
+
+    local cooldowns = {
+        {{"War_Fans"}, 35}, {{"War Drums"}, 36}, {{"Ice_Bda","Skills","Barren Hanging Garden"}, 22},
+        {{"Ice_Bda","Skills","Cold White Princesses"}, 22}, {{"Ice_Bda","Skills","Freezing Cloud"}, 22},
+        {{"Ice_Bda","Skills","Lotus Vines"}, 35}, {{"Ice_Bda","Skills","Wintry Icicles"}, 15},
+        {{"Swamp_Bda","Skills","Swamp Eject"}, 15}, {{"Swamp_Bda","Skills","Swamp Trap"}, 20},
+        {{"Swamp_Bda","Skills","Traveling Claws"}, 15}, {{"Swamp_Bda","Skills","Self Replication"}, 35}
+    }
+
+    for _, s in ipairs(cooldowns) do
+        local obj = p
+        for _, n in ipairs(s[1]) do
+            obj = obj:FindFirstChild(n)
+            if not obj then break end
+        end
+        if obj and obj:FindFirstChild("CoolDown") then
+            obj.CoolDown.Value = s[2]
+        end
+    end
+end
+
+if not CLEANER_RUNNING then
+    CLEANER_RUNNING = true
+    task.spawn(function()
+        while true do
+            task.wait(2)
+            pcall(function() CD() end)
+        end
+    end)
+end
+
+UserInputService.InputBegan:Connect(function(input, gameProcessed)
+    if gameProcessed then return end
+    if input.KeyCode == Enum.KeyCode.CapsLock then
+        local folder = ReplicatedStorage:WaitForChild("PlayerValues"):FindFirstChild(player.Name)
+        if folder then
+            for _, obj in ipairs(folder:GetDescendants()) do
+                if obj.Name == "Stun" then obj:Destroy() end
+            end
+        end
+    end
+end)
+
+local ESP_FOLDER = workspace:FindFirstChild("Ghost_ESP") or Instance.new("Folder", workspace)
+ESP_FOLDER.Name = "Ghost_ESP"
+
+local REAPER_COLOR = Color3.fromRGB(0, 150, 255)
+local ghostCache = {}
+
+local BODY_PARTS = {
+    "LowerTorso", "LeftUpperArm", "LeftLowerArm", "LeftHand",
+    "RightUpperArm", "RightLowerArm", "RightHand", "LeftUpperLeg", "LeftLowerLeg", 
+    "LeftFoot", "RightUpperLeg", "RightLowerLeg", "RightFoot"
+}
+
+local function RemoveGhost(playerName)
+    if ghostCache[playerName] then
+        for _, part in pairs(ghostCache[playerName]) do part:Destroy() end
+        ghostCache[playerName] = nil
+    end
+end
+
+local function CreateGhost(targetPlayer)
+    if ghostCache[targetPlayer.Name] then return end
+    
+    local parts = {}
+    for _, partName in ipairs(BODY_PARTS) do
+        local p = Instance.new("Part")
+        p.Name = partName
+        p.Size = Vector3.new(1, 1, 1)
+        p.Color = REAPER_COLOR
+        p.Material = Enum.Material.Neon
+        p.CanCollide = false
+        p.Anchored = true
+        p.Parent = ESP_FOLDER
+        parts[partName] = p
+    end
+    ghostCache[targetPlayer.Name] = parts
+end
+
+RunService.Heartbeat:Connect(function()
+    for _, p in ipairs(Players:GetPlayers()) do
+        if p == Players.LocalPlayer then continue end
+        
+        local data = ReplicatedStorage:FindFirstChild("Player_Data")
+        local pData = data and data:FindFirstChild(p.Name)
+        local isReaper = pData and pData:FindFirstChild("Demon_Art") and pData.Demon_Art.Value == "Reaper"
+        
+        if isReaper and p.Character then
+            if not ghostCache[p.Name] then CreateGhost(p) end
+            
+            local ghostParts = ghostCache[p.Name]
+            for _, partName in ipairs(BODY_PARTS) do
+                local realPart = p.Character:FindFirstChild(partName)
+                local ghostPart = ghostParts[partName]
+                
+                if realPart and ghostPart then
+                    ghostPart.CFrame = realPart.CFrame
+                    ghostPart.Size = realPart.Size * 0.75
+
+                    if realPart.Transparency > 0.5 then
+                        ghostPart.Transparency = 0.2
+                    else
+                        ghostPart.Transparency = 0.9
+                    end
+                end
+            end
+        else
+            if ghostCache[p.Name] then RemoveGhost(p.Name) end
+        end
+    end
+end)
+
+Players.PlayerRemoving:Connect(function(p) RemoveGhost(p.Name) end)

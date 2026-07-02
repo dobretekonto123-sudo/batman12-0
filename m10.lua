@@ -260,7 +260,7 @@ task.spawn(function()
     if equipped then
         local itemsToEquip = {
             Hat="Straw Hat", Lantern="Lantern Of Despair", Mask="Banigaru Mask", 
-            Shirt="Devourer Top", Uniform="Tengen Uniform", Necklace="Kesshoseki Necklace"
+            Shirt="Devourer Top", Uniform="Tengen Uniform", Necklace="Kesshoseki Necklace", Haorie="Tokosen Haorie"
         }
         for k, v in pairs(itemsToEquip) do
             local obj = equipped:FindFirstChild(k)
@@ -548,7 +548,7 @@ local function CD()
         {{"Ice_Bda","Skills","Cold White Princesses"}, 22}, {{"Ice_Bda","Skills","Freezing Cloud"}, 22},
         {{"Ice_Bda","Skills","Lotus Vines"}, 35}, {{"Ice_Bda","Skills","Wintry Icicles"}, 15},
         {{"Swamp_Bda","Skills","Swamp Eject"}, 15}, {{"Swamp_Bda","Skills","Swamp Trap"}, 20},
-        {{"Swamp_Bda","Skills","Traveling Claws"}, 15}, {{"Swamp_Bda","Skills","Self Replication"}, 35}
+        {{"Swamp_Bda","Skills","Traveling Claws"}, 15}
     }
 
     for _, s in ipairs(cooldowns) do
